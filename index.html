@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Bot v4 — Live Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0d0d;color:#e0e0e0;font-family:'Courier New',monospace;min-height:100vh}
+.topbar{background:#111;border-bottom:1px solid #1e1e1e;padding:9px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.title{color:#00ff88;font-size:14px;letter-spacing:2px;font-weight:500}
+.status-row{display:flex;align-items:center;gap:10px;font-size:11px;flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.live{background:#00ff88;animation:blink 1.5s infinite}
+.dot.off{background:#ff4466}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.green{color:#00ff88}.red{color:#ff4466}.blue{color:#00aaff}.yellow{color:#ffcc00}.muted{color:#555}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 16px}
+@media(min-width:600px){.metrics{grid-template-columns:repeat(6,1fr)}}
+.metric{background:#111;border:0.5px solid #1e1e1e;border-radius:8px;padding:9px 12px}
+.metric-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.metric-val{font-size:16px;font-weight:500}
+.metric-sub{font-size:10px;margin-top:2px;color:#555}
+.controls{display:flex;gap:6px;align-items:center;padding:0 16px 8px;flex-wrap:wrap}
+.pair-tab{padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;border:1px solid #2a2a2a;background:#1a1a1a;color:#888;font-family:inherit}
+.pair-tab.active{background:#0d2a1a;color:#00ff88;border-color:#1a4a2a}
+select{background:#1a1a1a;border:1px solid #2a2a2a;color:#e0e0e0;padding:4px 8px;border-radius:5px;font-family:inherit;font-size:11px}
+.btn{padding:5px 12px;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:500;border:1px solid}
+.btn-green{background:#0d2a1a;color:#00ff88;border-color:#1a4a2a}
+.btn-gray{background:#1a1a1a;color:#888;border-color:#2a2a2a}
+.btn-blue{background:#0d1a2a;color:#00aaff;border-color:#1a3a5a}
+.layout{display:grid;grid-template-columns:1fr;gap:10px;padding:0 16px 10px}
+@media(min-width:900px){.layout{grid-template-columns:1fr 310px}}
+.panel{background:#111;border:0.5px solid #1e1e1e;border-radius:8px;padding:12px}
+.panel-title{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.tv-wrap{border-radius:6px;overflow:hidden;height:420px}
+.right-col{display:flex;flex-direction:column;gap:8px}
+.signal-box{text-align:center;padding:10px 8px;border-radius:6px;margin-bottom:6px;border:1px solid}
+.signal-box.buy{background:#0d2a1a;border-color:#1a4a2a}
+.signal-box.sell{background:#2a0d0d;border-color:#4a1a1a}
+.signal-box.hold{background:#1a1a1a;border-color:#2a2a2a}
+.signal-text{font-size:22px;font-weight:500;letter-spacing:3px}
+.brain-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px}
+.brain-bar-wrap{width:70px;height:4px;background:#1a1a1a;border-radius:2px;overflow:hidden}
+.brain-bar{height:4px;border-radius:2px;transition:width 0.5s}
+.log-box{background:#0a0a0a;border-radius:5px;padding:7px;height:130px;overflow-y:auto;font-size:11px;line-height:1.75}
+.log-line{padding:1px 0;border-bottom:0.5px solid rgba(255,255,255,0.03)}
+.log-time{color:#333;margin-right:5px;font-size:10px}
+.log-buy{color:#00ff88}.log-sell{color:#ff4466}.log-info{color:#3a9eff}
+.log-warn{color:#ffcc00}.log-tp{color:#88ccff}.log-hold{color:#444}
+.trade-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:0.5px solid #1a1a1a;font-size:11px}
+.badge{padding:2px 6px;border-radius:3px;font-size:10px;font-weight:500}
+.badge-tp{background:#0d1a2a;color:#88ccff;border:1px solid #1a3a5a}
+.badge-sl{background:#2a0d0d;color:#ff4466;border:1px solid #4a1a1a}
+.pair-stat{background:#0a0a0a;border-radius:5px;padding:6px 8px;margin-bottom:4px;font-size:11px;display:flex;justify-content:space-between}
+.countdown{background:#0d1a0d;border:1px solid #1a4a1a;color:#00ff88;padding:3px 10px;border-radius:4px;font-size:11px}
+.no-vpn{background:#0d2a1a;border:1px solid #1a4a2a;color:#00ff88;font-size:10px;padding:2px 8px;border-radius:4px}
+.server-input{background:#1a1a1a;border:1px solid #2a2a2a;color:#e0e0e0;padding:4px 8px;border-radius:5px;font-family:'Courier New',monospace;font-size:11px;width:200px}
+.exp-box{background:#0a0a1a;border:1px solid #1a1a4a;border-radius:5px;padding:8px;margin-bottom:6px}
+.exp-row{display:flex;justify-content:space-between;font-size:11px;padding:2px 0}
+.verdict{text-align:center;padding:5px;border-radius:4px;font-size:11px;font-weight:500;margin-top:4px}
+.verdict.good{background:#0d2a1a;color:#00ff88;border:1px solid #1a4a2a}
+.verdict.bad{background:#2a0d0d;color:#ff4466;border:1px solid #4a1a1a}
+.verdict.wait{background:#1a1a0d;color:#ffcc00;border:1px solid #4a4a1a}
+.backup-badge{background:#0d1a2a;border:1px solid #1a3a5a;color:#00aaff;font-size:10px;padding:2px 6px;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="title">CLAUDE BOT v4 — LIVE</div>
+    <span class="no-vpn">FEE-AWARE</span>
+    <span style="font-size:16px;font-weight:500;color:#00ff88;margin:0 6px" id="price-ticker">-</span>
+  </div>
+  <div class="status-row">
+    <div class="dot off" id="conn-dot"></div>
+    <span id="conn-status" class="muted">Menghubungkan...</span>
+    <span class="muted">|</span>
+    <span class="countdown" id="countdown">30s</span>
+    <span class="muted">|</span>
+    <span class="muted" id="last-update">-</span>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="metric-label">Saldo Total</div><div class="metric-val green" id="m-saldo">$200.00</div><div class="metric-sub muted">dari $200</div></div>
+  <div class="metric"><div class="metric-label">P&L Bersih</div><div class="metric-val green" id="m-pnl">+$0.000</div><div class="metric-sub green" id="m-pnl-pct">setelah fee</div></div>
+  <div class="metric"><div class="metric-label">Win Rate</div><div class="metric-val green" id="m-wr">0%</div><div class="metric-sub muted" id="m-trades">0 trades</div></div>
+  <div class="metric"><div class="metric-label">Expectancy</div><div class="metric-val yellow" id="m-exp">$0.0000</div><div class="metric-sub muted">per trade net</div></div>
+  <div class="metric"><div class="metric-label">Profit Factor</div><div class="metric-val blue" id="m-pf">-</div><div class="metric-sub muted">>1.5 = bagus</div></div>
+  <div class="metric"><div class="metric-label">Total Fee</div><div class="metric-val red" id="m-fee">$0.000</div><div class="metric-sub muted">dibayar Binance</div></div>
+</div>
+
+<div class="controls">
+  <div style="display:flex;gap:4px;flex-wrap:wrap">
+    <div class="pair-tab active" onclick="switchPair('BINANCE:BTCUSDT',this,'BTCUSDT')">BTC</div>
+    <div class="pair-tab" onclick="switchPair('BINANCE:ETHUSDT',this,'ETHUSDT')">ETH</div>
+    <div class="pair-tab" onclick="switchPair('BINANCE:BNBUSDT',this,'BNBUSDT')">BNB</div>
+    <div class="pair-tab" onclick="switchPair('BINANCE:SOLUSDT',this,'SOLUSDT')">SOL</div>
+    <div class="pair-tab" onclick="switchPair('BINANCE:XRPUSDT',this,'XRPUSDT')">XRP</div>
+    <div class="pair-tab" onclick="switchPair('BINANCE:DOGEUSDT',this,'DOGEUSDT')">DOGE</div>
+  </div>
+  <select id="tf-sel" onchange="changeTF()">
+    <option value="1">1m</option>
+    <option value="5" selected>5m</option>
+    <option value="15">15m</option>
+    <option value="60">1H</option>
+    <option value="240">4H</option>
+  </select>
+  <input class="server-input" id="server-url" value="http://34.158.63.179:8080" placeholder="http://IP:8080">
+  <button class="btn btn-green" onclick="fetchLog()">↺ Fetch</button>
+  <button class="btn btn-gray" onclick="reloadTV()">↺ Chart</button>
+</div>
+
+<div class="layout">
+  <div>
+    <div class="panel" style="padding:8px;margin-bottom:10px">
+      <div class="tv-wrap"><div id="tv_chart" style="height:100%"></div></div>
+    </div>
+  </div>
+
+  <div class="right-col">
+    <!-- Analisis Strategi -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>Analisis Strategi</span>
+        <span id="trade-progress" class="muted">0/100</span>
+      </div>
+      <div class="exp-box">
+        <div class="exp-row"><span class="muted">Expectancy/trade</span><span id="exp-val" class="yellow">$0.0000</span></div>
+        <div class="exp-row"><span class="muted">Profit Factor</span><span id="pf-val" class="muted">-</span></div>
+        <div class="exp-row"><span class="muted">Fee Akurat</span><span id="fee-val" class="red">$0.000</span></div>
+        <div class="exp-row"><span class="muted">Gross Profit</span><span id="gp-val" class="green">$0.000</span></div>
+        <div class="exp-row"><span class="muted">Gross Loss</span><span id="gl-val" class="red">$0.000</span></div>
+      </div>
+      <div class="verdict wait" id="verdict-box">Kumpulkan 100 trade untuk penilaian valid</div>
+    </div>
+
+    <!-- Status Per Pair -->
+    <div class="panel">
+      <div class="panel-title"><span>Status Per Pair</span><span class="muted">$66.67/pair</span></div>
+      <div class="pair-stat"><span class="muted">BTC/USDT</span><span id="ps-btc-rsi" class="muted">RSI: -</span><span id="ps-btc-saldo" class="muted">$-</span></div>
+      <div class="pair-stat"><span class="muted">ETH/USDT</span><span id="ps-eth-rsi" class="muted">RSI: -</span><span id="ps-eth-saldo" class="muted">$-</span></div>
+      <div class="pair-stat"><span class="muted">BNB/USDT</span><span id="ps-bnb-rsi" class="muted">RSI: -</span><span id="ps-bnb-saldo" class="muted">$-</span></div>
+    </div>
+
+    <!-- AI Signal -->
+    <div class="panel">
+      <div class="panel-title"><span>AI Sinyal</span><span id="ai-pair" class="muted">BTC/USDT</span></div>
+      <div class="signal-box hold" id="signal-box">
+        <div class="signal-text muted" id="signal-text">HOLD</div>
+        <div style="font-size:11px;color:#555;margin-top:2px" id="signal-conf">Menunggu data...</div>
+      </div>
+      <div class="brain-row"><span class="muted">RSI</span><div class="brain-bar-wrap"><div class="brain-bar" id="br-rsi" style="width:50%;background:#3a9eff"></div></div><span id="bv-rsi" class="muted">-</span></div>
+      <div class="brain-row"><span class="muted">MACD</span><div class="brain-bar-wrap"><div class="brain-bar" id="br-macd" style="width:50%;background:#9b59b6"></div></div><span id="bv-macd" class="muted">-</span></div>
+      <div class="brain-row"><span class="muted">BB%</span><div class="brain-bar-wrap"><div class="brain-bar" id="br-bb" style="width:50%;background:#e67e22"></div></div><span id="bv-bb" class="muted">-</span></div>
+      <div class="brain-row"><span class="muted">EMA</span><div class="brain-bar-wrap"><div class="brain-bar" id="br-ema" style="width:50%;background:#00ff88"></div></div><span id="bv-ema" class="muted">-</span></div>
+    </div>
+
+    <!-- Log Bot -->
+    <div class="panel">
+      <div class="panel-title"><span>Log Bot</span><span id="log-lines" class="muted">0 baris</span></div>
+      <div class="log-box" id="log-box"><div class="muted" style="padding:8px;text-align:center;font-size:11px">Menghubungkan ke server...</div></div>
+    </div>
+
+    <!-- History Trade — Tersimpan Permanen -->
+    <div class="panel">
+      <div class="panel-title">
+        <span>Riwayat Trade <span class="backup-badge">AUTO-SAVE</span></span>
+        <div style="display:flex;gap:4px">
+          <span id="trade-count" class="muted">0</span>
+          <button class="btn btn-gray" style="padding:1px 6px;font-size:10px" onclick="clearHistory()">Reset</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:#333;padding:2px 0;border-bottom:1px solid #1a1a1a;margin-bottom:3px">
+        <span>Type</span><span>Pair</span><span>Net P&L</span><span>Fee</span><span>Jam</span>
+      </div>
+      <div id="trade-list" style="max-height:180px;overflow-y:auto"><div class="muted" style="font-size:11px;padding:4px">Belum ada trade...</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ STORAGE KEY ══════════════════════════════
+const STORAGE_KEY = 'claudebot_v4_trades';
+const CAPITAL = 200;
+
+let currentSymbol='BINANCE:BTCUSDT', currentTF='5';
+let savedTrades = loadSavedTrades();
+let countdown=30, countInterval;
+let pairState={
+  BTCUSDT:{rsi:0,saldo:66.67,action:'HOLD',conf:0,macd:0,bb:0,ema:'DOWN'},
+  ETHUSDT:{rsi:0,saldo:66.67,action:'HOLD',conf:0,macd:0,bb:0,ema:'DOWN'},
+  BNBUSDT:{rsi:0,saldo:66.67,action:'HOLD',conf:0,macd:0,bb:0,ema:'DOWN'}
+};
+
+// ══ PERSISTENT STORAGE ══════════════════════
+function loadSavedTrades() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function saveTrades(trades) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+  } catch(e) { console.warn('Storage penuh:', e); }
+}
+
+function clearHistory() {
+  if (confirm('Reset semua history trade? Data tidak bisa dikembalikan.')) {
+    savedTrades = [];
+    saveTrades([]);
+    renderTrades();
+    updateMetricsFromSaved();
+  }
+}
+
+function mergeNewTrades(newTrades) {
+  // Merge trade baru ke history tersimpan, hindari duplikat berdasarkan waktu+pair
+  newTrades.forEach(t => {
+    const exists = savedTrades.some(s => s.time === t.time && s.pair === t.pair && s.type === t.type);
+    if (!exists) savedTrades.unshift(t);
+  });
+  savedTrades.sort((a,b) => b.time > a.time ? 1 : -1);
+  saveTrades(savedTrades);
+}
+
+// ══ TRADINGVIEW ══════════════════════════════
+function loadTV(symbol, interval) {
+  document.getElementById('tv_chart').innerHTML = `<iframe
+    src="https://s.tradingview.com/widgetembed/?symbol=${symbol}&interval=${interval}&theme=dark&style=1&locale=id&toolbar_bg=111111&studies=RSI%40tv-basicstudies%1FMACD%40tv-basicstudies%1FBB%40tv-basicstudies&overrides=%7B%22mainSeriesProperties.candleStyle.upColor%22%3A%22%2300ff88%22%2C%22mainSeriesProperties.candleStyle.downColor%22%3A%22%23ff4466%22%2C%22paneProperties.background%22%3A%22%230d0d0d%22%7D&timezone=Asia%2FJakarta"
+    style="width:100%;height:420px;border:none;border-radius:6px"
+    allowtransparency="true" allowfullscreen="" frameborder="0"></iframe>`;
+}
+
+function switchPair(sym, el, pair) {
+  currentSymbol=sym;
+  document.querySelectorAll('.pair-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('ai-pair').textContent=pair.replace('USDT','/USDT');
+  loadTV(sym, currentTF);
+  updateSignalUI(pair);
+}
+function changeTF(){currentTF=document.getElementById('tf-sel').value;loadTV(currentSymbol,currentTF);}
+function reloadTV(){loadTV(currentSymbol,currentTF);}
+
+// ══ FETCH LOG ════════════════════════════════
+async function fetchLog() {
+  const url=document.getElementById('server-url').value.trim();
+  try {
+    const resp=await fetch(url,{mode:'cors',cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const text=await resp.text();
+    const lines=text.split('\n').filter(l=>l.trim());
+    const newTrades = parseLog(lines);
+    mergeNewTrades(newTrades);
+    renderLog(lines);
+    document.getElementById('log-lines').textContent=lines.length+' baris';
+    document.getElementById('last-update').textContent=new Date().toLocaleTimeString('id-ID');
+    document.getElementById('conn-dot').className='dot live';
+    document.getElementById('conn-status').textContent='Terhubung ✓';
+    document.getElementById('conn-status').className='green';
+    updateMetricsFromSaved();
+    renderTrades();
+  } catch(e) {
+    document.getElementById('conn-dot').className='dot off';
+    document.getElementById('conn-status').textContent='Gagal: '+e.message;
+    document.getElementById('conn-status').className='red';
+  }
+}
+
+// ══ PARSE LOG ════════════════════════════════
+function parseLog(lines) {
+  const newTrades = [];
+  let lastBuyPrice = 0;
+
+  lines.forEach(line => {
+    // Update pair state
+    const pairM=line.match(/\[(BTCUSDT|ETHUSDT|BNBUSDT|SOLUSDT|XRPUSDT|DOGEUSDT)\]/);
+    if(pairM){
+      const p=pairM[1];
+      if(!pairState[p]) pairState[p]={rsi:0,saldo:66.67,action:'HOLD',conf:0,macd:0,bb:0,ema:'DOWN'};
+      const rM=line.match(/RSI:([\d.]+)/);
+      const mM=line.match(/MACD:([-\d.]+)/);
+      const bM=line.match(/BB:([\d.]+)/);
+      const eM=line.match(/EMA:(UP|DOWN)/);
+      const sM=line.match(/Saldo:\$([\d.]+)/);
+      const sigM=line.match(/AI:(BUY|SELL|HOLD)\((\d+)%\)/);
+      if(rM) pairState[p].rsi=parseFloat(rM[1]);
+      if(mM) pairState[p].macd=parseFloat(mM[1]);
+      if(bM) pairState[p].bb=parseFloat(bM[1]);
+      if(eM) pairState[p].ema=eM[1];
+      if(sM) pairState[p].saldo=parseFloat(sM[1]);
+      if(sigM){pairState[p].action=sigM[1];pairState[p].conf=parseInt(sigM[2]);}
+    }
+
+    // Tangkap BUY
+    if(line.includes('[SIM] BUY') && line.includes('@')){
+      const pm=line.match(/@ \$([\d.]+)/);
+      if(pm) lastBuyPrice=parseFloat(pm[1]);
+    }
+
+    // Tangkap SELL/TP/SL — HANYA dari baris yang punya "P&L:" dengan format bot v4
+    // Fix: hanya baca baris yang benar-benar berisi trade result
+    if((line.includes('TAKE-PROFIT')||line.includes('STOP-LOSS')||line.includes('AI-SELL'))
+       && line.includes('P&L:')){
+      // Cari P&L dengan format +$X.XXX atau -$X.XXX
+      const pnlM = line.match(/P&L:\s*([+-]?\$[\d.]+)/);
+      // Cari Fee dengan format Fee $X.XXX — HANYA dari baris trade
+      const feeM = line.match(/Fee\s*\$([\d.]+)/);
+      const tm = line.match(/(\d{2}:\d{2}:\d{2})/);
+      const pairLine=(line.match(/\[(BTCUSDT|ETHUSDT|BNBUSDT)\]/)||['','-'])[1];
+      const type=line.includes('STOP')?'SL':'TP';
+
+      if(pnlM){
+        const pnl=parseFloat(pnlM[1].replace('$',''));
+        const fee=feeM?parseFloat(feeM[1]):0.026; // default fee estimasi
+        const dateM=line.match(/(\d{4}-\d{2}-\d{2})/);
+        newTrades.push({
+          pnl, fee,
+          entry:lastBuyPrice,
+          time:tm?tm[1]:'-',
+          date:dateM?dateM[1]:new Date().toISOString().split('T')[0],
+          type, pair:pairLine,
+          id: (tm?tm[1]:'')+pairLine+type
+        });
+      }
+    }
+  });
+
+  updatePairStats();
+  updateSignalUI('BTCUSDT');
+  return newTrades;
+}
+
+// ══ UPDATE UI ════════════════════════════════
+function updateMetricsFromSaved() {
+  const trades = savedTrades;
+  const n = trades.length;
+  const wins = trades.filter(t=>t.pnl>0).length;
+  const losses = n - wins;
+  const wr = n>0?Math.round(wins/n*100):0;
+  const totalPnl = trades.reduce((s,t)=>s+t.pnl,0);
+  const totalFee = trades.reduce((s,t)=>s+(t.fee||0),0);
+  const grossProfit = trades.filter(t=>t.pnl>0).reduce((s,t)=>s+t.pnl,0);
+  const grossLoss = Math.abs(trades.filter(t=>t.pnl<0).reduce((s,t)=>s+t.pnl,0));
+  const exp = n>0?totalPnl/n:0;
+  const pf = grossLoss>0?(grossProfit/grossLoss):(grossProfit>0?999:0);
+  const pfStr = pf===999?'∞':pf.toFixed(2);
+
+  document.getElementById('m-saldo').textContent='$'+(CAPITAL+totalPnl).toFixed(3);
+  document.getElementById('m-pnl').textContent=(totalPnl>=0?'+':'')+'$'+Math.abs(totalPnl).toFixed(3);
+  document.getElementById('m-pnl').className='metric-val '+(totalPnl>=0?'green':'red');
+  document.getElementById('m-wr').textContent=wr+'%';
+  document.getElementById('m-wr').className='metric-val '+(wr>=55?'green':wr>=40?'yellow':'red');
+  document.getElementById('m-trades').textContent=n+' trades';
+  document.getElementById('m-exp').textContent=(exp>=0?'+':'')+'$'+exp.toFixed(4);
+  document.getElementById('m-exp').className='metric-val '+(exp>0?'green':exp<0?'red':'yellow');
+  document.getElementById('m-pf').textContent=pfStr;
+  document.getElementById('m-pf').className='metric-val '+(pf>1.5?'green':pf>1?'yellow':'red');
+  document.getElementById('m-fee').textContent='$'+totalFee.toFixed(3);
+  document.getElementById('trade-count').textContent=n;
+
+  // Exp box
+  document.getElementById('exp-val').textContent=(exp>=0?'+':'')+'$'+exp.toFixed(4);
+  document.getElementById('exp-val').style.color=exp>0?'#00ff88':exp<0?'#ff4466':'#ffcc00';
+  document.getElementById('pf-val').textContent=pfStr;
+  document.getElementById('pf-val').style.color=pf>1.5?'#00ff88':pf>1?'#ffcc00':'#ff4466';
+  document.getElementById('fee-val').textContent='$'+totalFee.toFixed(3);
+  document.getElementById('gp-val').textContent='+$'+grossProfit.toFixed(3);
+  document.getElementById('gl-val').textContent='-$'+grossLoss.toFixed(3);
+  document.getElementById('trade-progress').textContent=n+'/100';
+
+  // Verdict
+  const vbox=document.getElementById('verdict-box');
+  if(n<30){vbox.className='verdict wait';vbox.textContent='Kumpulkan '+(100-n)+' trade lagi untuk validasi';}
+  else if(n<100){vbox.className='verdict wait';vbox.textContent=n+' trade: Exp '+( exp>=0?'+':'')+'$'+exp.toFixed(4)+'/trade — lanjutkan!';}
+  else if(exp>0&&pf>1){vbox.className='verdict good';vbox.textContent='✓ Strategi VALID — Layak pertimbangkan live trading!';}
+  else{vbox.className='verdict bad';vbox.textContent='✗ Expectancy negatif — Perbaiki strategi sebelum live!';}
+}
+
+function updatePairStats(){
+  const map={BTCUSDT:'btc',ETHUSDT:'eth',BNBUSDT:'bnb'};
+  Object.entries(map).forEach(([pair,key])=>{
+    const s=pairState[pair]||{rsi:0,saldo:66.67};
+    const rEl=document.getElementById('ps-'+key+'-rsi');
+    const sEl=document.getElementById('ps-'+key+'-saldo');
+    if(rEl){rEl.textContent='RSI: '+s.rsi.toFixed(1);rEl.style.color=s.rsi<30?'#00ff88':s.rsi>70?'#ff4466':'#ffcc00';}
+    if(sEl){sEl.textContent='$'+s.saldo.toFixed(2);sEl.style.color=s.saldo>66.67?'#00ff88':s.saldo<60?'#ff4466':'#555';}
+  });
+}
+
+function updateSignalUI(pair){
+  const s=pairState[pair]||Object.values(pairState)[0];
+  if(!s) return;
+  const sbox=document.getElementById('signal-box');
+  sbox.className='signal-box '+s.action.toLowerCase();
+  const st=document.getElementById('signal-text');
+  st.textContent=s.action;
+  st.style.color=s.action==='BUY'?'#00ff88':s.action==='SELL'?'#ff4466':'#555';
+  document.getElementById('signal-conf').textContent='Confidence: '+s.conf+'%';
+  document.getElementById('br-rsi').style.width=Math.min(s.rsi,100)+'%';
+  document.getElementById('bv-rsi').textContent=s.rsi.toFixed(1);
+  document.getElementById('bv-rsi').style.color=s.rsi<30?'#00ff88':s.rsi>70?'#ff4466':'#ffcc00';
+  const mp=Math.min(Math.max((s.macd/300*50+50),0),100);
+  document.getElementById('br-macd').style.width=mp+'%';
+  document.getElementById('bv-macd').textContent=s.macd.toFixed(4);
+  document.getElementById('bv-macd').style.color=s.macd>0?'#00ff88':'#ff4466';
+  document.getElementById('br-bb').style.width=(s.bb*100)+'%';
+  document.getElementById('bv-bb').textContent=(s.bb*100).toFixed(0)+'%';
+  document.getElementById('br-ema').style.width=s.ema==='UP'?'72%':'28%';
+  document.getElementById('br-ema').style.background=s.ema==='UP'?'#00ff88':'#ff4466';
+  document.getElementById('bv-ema').textContent=s.ema==='UP'?'Bullish':'Bearish';
+  document.getElementById('bv-ema').style.color=s.ema==='UP'?'#00ff88':'#ff4466';
+}
+
+function renderLog(lines){
+  const box=document.getElementById('log-box');
+  box.innerHTML='';
+  lines.slice(-60).forEach(line=>{
+    const div=document.createElement('div');
+    div.className='log-line';
+    let cls='log-info',icon='';
+    if(line.includes('[SIM] BUY')){cls='log-buy';icon='▲ ';}
+    else if(line.includes('STOP-LOSS')){cls='log-sell';icon='✕ ';}
+    else if(line.includes('TAKE-PROFIT')){cls='log-tp';icon='✓ ';}
+    else if(line.includes('WARNING')){cls='log-warn';icon='⚠ ';}
+    else if(line.includes('AI:HOLD')){cls='log-hold';}
+    else if(line.includes('AI:BUY')){cls='log-buy';}
+    else if(line.includes('AI:SELL')){cls='log-sell';}
+    const t=(line.match(/(\d{2}:\d{2}:\d{2})/)||['',''])[1];
+    const msg=line.replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+ \[\w+\] /,'');
+    div.innerHTML=`<span class="log-time">${t}</span><span class="${cls}">${icon}${msg}</span>`;
+    box.appendChild(div);
+  });
+  box.scrollTop=box.scrollHeight;
+}
+
+function renderTrades(){
+  const list=document.getElementById('trade-list');
+  if(!savedTrades.length){
+    list.innerHTML='<div class="muted" style="font-size:11px;padding:4px">Belum ada trade tersimpan...</div>';
+    return;
+  }
+  list.innerHTML=savedTrades.slice(0,20).map(t=>`
+    <div class="trade-row">
+      <span class="badge badge-${t.type.toLowerCase()}">${t.type}</span>
+      <span style="color:#888;font-size:10px">${t.pair.replace('USDT','')}</span>
+      <span class="${t.pnl>=0?'green':'red'}">${t.pnl>=0?'+':''}$${t.pnl.toFixed(4)}</span>
+      <span class="red" style="font-size:10px">-$${(t.fee||0).toFixed(3)}</span>
+      <span class="muted">${t.date||''} ${t.time}</span>
+    </div>`).join('');
+}
+
+// Countdown
+countInterval=setInterval(()=>{
+  countdown--;
+  document.getElementById('countdown').textContent=countdown+'s';
+  if(countdown<=0){countdown=30;fetchLog();}
+},1000);
+
+// Init
+loadTV(currentSymbol, currentTF);
+updateMetricsFromSaved();
+renderTrades();
+fetchLog();
+</script>
+</body>
+</html>
