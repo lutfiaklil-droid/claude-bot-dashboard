@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Bot — Perbandingan A vs B</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d0d0d;color:#e0e0e0;font-family:'Courier New',monospace;min-height:100vh}
+.topbar{background:#111;border-bottom:1px solid #1e1e1e;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.title{color:#00ff88;font-size:13px;letter-spacing:2px;font-weight:500}
+.status-row{display:flex;align-items:center;gap:8px;font-size:11px;flex-wrap:wrap}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot.live{background:#00ff88;animation:blink 1.5s infinite}
+.dot.off{background:#ff4466}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.green{color:#00ff88}.red{color:#ff4466}.yellow{color:#ffcc00}.muted{color:#555}.blue{color:#00aaff}
+.countdown{background:#0d1a0d;border:1px solid #1a4a1a;color:#00ff88;padding:2px 8px;border-radius:4px;font-size:11px}
+
+/* 2 kolom utama */
+.main-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 16px}
+@media(max-width:700px){.main-grid{grid-template-columns:1fr}}
+
+.bot-col{display:flex;flex-direction:column;gap:8px}
+.bot-header{text-align:center;padding:8px;border-radius:8px;font-size:13px;font-weight:500;letter-spacing:1px}
+.bot-a .bot-header{background:#0d2a1a;color:#00ff88;border:1px solid #1a4a2a}
+.bot-b .bot-header{background:#0d1a2a;color:#00aaff;border:1px solid #1a3a5a}
+
+.panel{background:#111;border:0.5px solid #1e1e1e;border-radius:8px;padding:10px}
+.panel-title{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;display:flex;justify-content:space-between}
+
+/* Metric cards */
+.metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px}
+.metric{background:#0a0a0a;border-radius:5px;padding:7px 8px}
+.metric-label{font-size:9px;color:#555;text-transform:uppercase;margin-bottom:2px}
+.metric-val{font-size:14px;font-weight:500}
+.metric-sub{font-size:9px;color:#555;margin-top:1px}
+
+/* Verdict */
+.verdict{text-align:center;padding:5px 8px;border-radius:4px;font-size:11px;font-weight:500;margin:4px 0}
+.verdict.good{background:#0d2a1a;color:#00ff88;border:1px solid #1a4a2a}
+.verdict.bad{background:#2a0d0d;color:#ff4466;border:1px solid #4a1a1a}
+.verdict.warn{background:#2a1a0d;color:#ffcc00;border:1px solid #4a3a1a}
+.verdict.wait{background:#1a1a1a;color:#555;border:1px solid #2a2a2a}
+
+/* Per pair stats */
+.pair-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #1a1a1a;font-size:11px}
+.pair-row:last-child{border-bottom:none}
+
+/* Trade list */
+.trade-list{max-height:160px;overflow-y:auto}
+.trade-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:0.5px solid #1a1a1a;font-size:10px}
+.badge{padding:1px 5px;border-radius:3px;font-size:9px;font-weight:500}
+.badge-tp{background:#0d1a2a;color:#88ccff;border:1px solid #1a3a5a}
+.badge-sl{background:#2a0d0d;color:#ff4466;border:1px solid #4a1a1a}
+
+/* Log */
+.log-box{background:#0a0a0a;border-radius:4px;padding:6px;height:110px;overflow-y:auto;font-size:10px;line-height:1.7}
+.log-line{padding:0.5px 0;border-bottom:0.5px solid rgba(255,255,255,0.02)}
+.log-time{color:#333;margin-right:4px}
+.log-buy{color:#00ff88}.log-sell{color:#ff4466}.log-hold{color:#333}
+.log-tp{color:#88ccff}.log-sum{color:#9b59b6}
+
+/* Config row */
+.config-row{display:flex;justify-content:space-between;font-size:10px;padding:2px 0;color:#555}
+.config-val{color:#888}
+
+/* Server input */
+.server-input{background:#1a1a1a;border:1px solid #2a2a2a;color:#e0e0e0;padding:3px 6px;border-radius:4px;font-family:'Courier New',monospace;font-size:10px;width:100%}
+.btn{padding:4px 10px;border-radius:4px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:500;border:1px solid}
+.btn-green{background:#0d2a1a;color:#00ff88;border-color:#1a4a2a}
+.btn-blue{background:#0d1a2a;color:#00aaff;border-color:#1a3a5a}
+
+/* Winner banner */
+.winner-banner{background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:8px 16px;margin:0 16px 10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.winner-label{font-size:11px;color:#555}
+.winner-val{font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="title">CLAUDE BOT — SIMULASI A vs B</div>
+    <span style="font-size:10px;padding:2px 6px;border-radius:3px;background:#1a1a1a;color:#555">FEE-AWARE · EMA FILTER · NO AI-SELL · 15m</span>
+  </div>
+  <div class="status-row">
+    <div class="dot off" id="dot-a"></div><span id="st-a" class="muted">Bot A...</span>
+    <span class="muted">|</span>
+    <div class="dot off" id="dot-b"></div><span id="st-b" class="muted">Bot B...</span>
+    <span class="muted">|</span>
+    <span class="countdown" id="countdown">30s</span>
+  </div>
+</div>
+
+<!-- Winner comparison bar -->
+<div class="winner-banner">
+  <div>
+    <div class="winner-label">Bot A (BTC/ETH/BNB)</div>
+    <div class="winner-val green" id="cmp-a-pnl">P&L: $0.000</div>
+  </div>
+  <div style="text-align:center">
+    <div class="winner-label">Pemenang Sementara</div>
+    <div class="winner-val" id="cmp-winner" style="color:#555">-</div>
+  </div>
+  <div style="text-align:right">
+    <div class="winner-label">Bot B (SOL/XRP/DOGE)</div>
+    <div class="winner-val blue" id="cmp-b-pnl">P&L: $0.000</div>
+  </div>
+</div>
+
+<div class="main-grid">
+
+  <!-- BOT A: BTC/ETH/BNB -->
+  <div class="bot-col bot-a">
+    <div class="bot-header">🔵 SIMULASI A — BTC / ETH / BNB</div>
+
+    <!-- Config & Server -->
+    <div class="panel">
+      <div class="panel-title"><span>Server</span><span id="upd-a" class="muted">-</span></div>
+      <input class="server-input" id="url-a" value="http://35.198.234.202:8080" style="margin-bottom:5px">
+      <button class="btn btn-green" onclick="fetchA()">↺ Fetch A</button>
+      <div style="margin-top:6px">
+        <div class="config-row"><span>Pairs</span><span class="config-val">BTC · ETH · BNB</span></div>
+        <div class="config-row"><span>SL / TP</span><span class="config-val">1.5% / 1.5%</span></div>
+        <div class="config-row"><span>Filter</span><span class="config-val green">EMA UP · No AI-SELL</span></div>
+        <div class="config-row"><span>Timeframe</span><span class="config-val">15 Menit</span></div>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="panel">
+      <div class="panel-title"><span>Performa</span><span id="prog-a" class="muted">0/100</span></div>
+      <div class="metrics-grid">
+        <div class="metric"><div class="metric-label">P&L Bersih</div><div class="metric-val green" id="a-pnl">$0.000</div><div class="metric-sub">setelah fee</div></div>
+        <div class="metric"><div class="metric-label">Win Rate</div><div class="metric-val" id="a-wr">0%</div><div class="metric-sub" id="a-trades">0 trades</div></div>
+        <div class="metric"><div class="metric-label">Expectancy</div><div class="metric-val yellow" id="a-exp">$0.000</div><div class="metric-sub">/trade</div></div>
+        <div class="metric"><div class="metric-label">Profit Factor</div><div class="metric-val blue" id="a-pf">-</div><div class="metric-sub">>1.5 bagus</div></div>
+        <div class="metric"><div class="metric-label">Total Fee</div><div class="metric-val red" id="a-fee">$0.000</div><div class="metric-sub">dibayar</div></div>
+        <div class="metric"><div class="metric-label">Saldo</div><div class="metric-val" id="a-saldo">$200.00</div><div class="metric-sub">dari $200</div></div>
+      </div>
+      <div class="verdict wait" id="verd-a">Menunggu data...</div>
+    </div>
+
+    <!-- Per Pair -->
+    <div class="panel">
+      <div class="panel-title"><span>Per Pair</span></div>
+      <div class="pair-row"><span style="color:#f7931a">BTC</span><span id="a-btc-t" class="muted">0 trades</span><span id="a-btc-wr" class="muted">WR:-</span><span id="a-btc-net" class="muted">$0.000</span></div>
+      <div class="pair-row"><span style="color:#627eea">ETH</span><span id="a-eth-t" class="muted">0 trades</span><span id="a-eth-wr" class="muted">WR:-</span><span id="a-eth-net" class="muted">$0.000</span></div>
+      <div class="pair-row"><span style="color:#f3ba2f">BNB</span><span id="a-bnb-t" class="muted">0 trades</span><span id="a-bnb-wr" class="muted">WR:-</span><span id="a-bnb-net" class="muted">$0.000</span></div>
+    </div>
+
+    <!-- Trade List -->
+    <div class="panel">
+      <div class="panel-title"><span>Riwayat Trade</span><span id="a-tc" class="muted">0</span></div>
+      <div class="trade-list" id="trades-a"><div class="muted" style="font-size:10px;padding:4px">Belum ada trade...</div></div>
+    </div>
+
+    <!-- Log -->
+    <div class="panel">
+      <div class="panel-title"><span>Log Bot A</span><span id="a-lines" class="muted">0 baris</span></div>
+      <div class="log-box" id="log-a"><div class="muted" style="padding:4px">Menghubungkan...</div></div>
+    </div>
+  </div>
+
+  <!-- BOT B: SOL/XRP/DOGE -->
+  <div class="bot-col bot-b">
+    <div class="bot-header">🟢 SIMULASI B — SOL / XRP / DOGE</div>
+
+    <!-- Config & Server -->
+    <div class="panel">
+      <div class="panel-title"><span>Server</span><span id="upd-b" class="muted">-</span></div>
+      <input class="server-input" id="url-b" value="http://35.198.234.202:8081" style="margin-bottom:5px">
+      <button class="btn btn-blue" onclick="fetchB()">↺ Fetch B</button>
+      <div style="margin-top:6px">
+        <div class="config-row"><span>Pairs</span><span class="config-val">SOL · XRP · DOGE</span></div>
+        <div class="config-row"><span>SL / TP</span><span class="config-val">1.5% / 1.5%</span></div>
+        <div class="config-row"><span>Filter</span><span class="config-val green">EMA UP · No AI-SELL</span></div>
+        <div class="config-row"><span>Timeframe</span><span class="config-val">15 Menit</span></div>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="panel">
+      <div class="panel-title"><span>Performa</span><span id="prog-b" class="muted">0/100</span></div>
+      <div class="metrics-grid">
+        <div class="metric"><div class="metric-label">P&L Bersih</div><div class="metric-val green" id="b-pnl">$0.000</div><div class="metric-sub">setelah fee</div></div>
+        <div class="metric"><div class="metric-label">Win Rate</div><div class="metric-val" id="b-wr">0%</div><div class="metric-sub" id="b-trades">0 trades</div></div>
+        <div class="metric"><div class="metric-label">Expectancy</div><div class="metric-val yellow" id="b-exp">$0.000</div><div class="metric-sub">/trade</div></div>
+        <div class="metric"><div class="metric-label">Profit Factor</div><div class="metric-val blue" id="b-pf">-</div><div class="metric-sub">>1.5 bagus</div></div>
+        <div class="metric"><div class="metric-label">Total Fee</div><div class="metric-val red" id="b-fee">$0.000</div><div class="metric-sub">dibayar</div></div>
+        <div class="metric"><div class="metric-label">Saldo</div><div class="metric-val" id="b-saldo">$200.00</div><div class="metric-sub">dari $200</div></div>
+      </div>
+      <div class="verdict wait" id="verd-b">Menunggu data...</div>
+    </div>
+
+    <!-- Per Pair -->
+    <div class="panel">
+      <div class="panel-title"><span>Per Pair</span></div>
+      <div class="pair-row"><span style="color:#9945ff">SOL</span><span id="b-sol-t" class="muted">0 trades</span><span id="b-sol-wr" class="muted">WR:-</span><span id="b-sol-net" class="muted">$0.000</span></div>
+      <div class="pair-row"><span style="color:#00aae4">XRP</span><span id="b-xrp-t" class="muted">0 trades</span><span id="b-xrp-wr" class="muted">WR:-</span><span id="b-xrp-net" class="muted">$0.000</span></div>
+      <div class="pair-row"><span style="color:#c2a633">DOGE</span><span id="b-doge-t" class="muted">0 trades</span><span id="b-doge-wr" class="muted">WR:-</span><span id="b-doge-net" class="muted">$0.000</span></div>
+    </div>
+
+    <!-- Trade List -->
+    <div class="panel">
+      <div class="panel-title"><span>Riwayat Trade</span><span id="b-tc" class="muted">0</span></div>
+      <div class="trade-list" id="trades-b"><div class="muted" style="font-size:10px;padding:4px">Belum ada trade...</div></div>
+    </div>
+
+    <!-- Log -->
+    <div class="panel">
+      <div class="panel-title"><span>Log Bot B</span><span id="b-lines" class="muted">0 baris</span></div>
+      <div class="log-box" id="log-b"><div class="muted" style="padding:4px">Menghubungkan...</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let countdown = 30;
+const CAPITAL = 200;
+
+// ── Parse Log ────────────────────────────────
+function parseLog(lines, prefix) {
+  let summary = {total:{trades:0,net:0,exp:0,pf:0,fee:0}, pairs:{}};
+  let trades = [];
+  let lastBuy = {};
+  let pairState = {};
+
+  lines.forEach(line => {
+    // Summary per pair
+    const sumM = line.match(/\s+(SOLUSDT|XRPUSDT|DOGEUSDT|BTCUSDT|ETHUSDT|BNBUSDT)\s+Trades:\s*(\d+)\s+WR:\s*(\d+)%\s+Net:\$([+-]?[\d.]+)\s+Exp:\$([+-]?[\d.]+)\/trade\s+PF:([\d.]+)\s+Fee:\$([\d.]+)\s+Saldo:\$([\d.]+)/);
+    if (sumM) {
+      summary.pairs[sumM[1]] = {
+        trades:parseInt(sumM[2]), wr:parseInt(sumM[3]),
+        net:parseFloat(sumM[4]), exp:parseFloat(sumM[5]),
+        pf:parseFloat(sumM[6]), fee:parseFloat(sumM[7]), saldo:parseFloat(sumM[8])
+      };
+    }
+
+    // Total
+    const totM = line.match(/\s+TOTAL\s+Trades:\s*(\d+)\s+Net:\$([+-]?[\d.]+)\s+Exp:\$([+-]?[\d.]+)\/trade(?:\s+PF:([\d.]+))?(?:\s+Fee:\$([\d.]+))?/);
+    if (totM) {
+      summary.total.trades = parseInt(totM[1]);
+      summary.total.net    = parseFloat(totM[2]);
+      summary.total.exp    = parseFloat(totM[3]);
+      summary.total.pf     = totM[4] ? parseFloat(totM[4]) : 0;
+      summary.total.fee    = totM[5] ? parseFloat(totM[5]) : 0;
+    }
+
+    // BUY
+    if (line.includes('[SIM] BUY') && line.includes('@')) {
+      const pM = line.match(/\[(SOLUSDT|XRPUSDT|DOGEUSDT|BTCUSDT|ETHUSDT|BNBUSDT)\]/);
+      const prM = line.match(/@ \$([\d.]+)/);
+      if (pM && prM) lastBuy[pM[1]] = parseFloat(prM[1]);
+    }
+
+    // TP/SL
+    if ((line.includes('TAKE-PROFIT') || line.includes('STOP-LOSS')) && line.includes('P&L:')) {
+      const pM   = line.match(/\[(SOLUSDT|XRPUSDT|DOGEUSDT|BTCUSDT|ETHUSDT|BNBUSDT)\]/);
+      const pnlM = line.match(/P&L:\s*\$?([+-]?[\d.]+)/);
+      const feeM = line.match(/\bFee[:\s]+\$?([\d.]+)/);
+      const tm   = line.match(/(\d{2}:\d{2}:\d{2})/);
+      const type = line.includes('STOP') ? 'SL' : 'TP';
+      const pair = pM ? pM[1] : '-';
+      if (pnlM) {
+        trades.unshift({
+          pnl: parseFloat(pnlM[1]),
+          fee: feeM ? parseFloat(feeM[1]) : 0.025,
+          type, pair,
+          time: tm ? tm[1] : '-'
+        });
+      }
+    }
+
+    // Pair state (last RSI, EMA)
+    const pairM = line.match(/\[(SOLUSDT|XRPUSDT|DOGEUSDT|BTCUSDT|ETHUSDT|BNBUSDT)\]/);
+    if (pairM) {
+      const p = pairM[1];
+      const rM = line.match(/RSI:([\d.]+)/);
+      const sigM = line.match(/AI:(BUY|SELL|HOLD)\((\d+)%\)/);
+      if (!pairState[p]) pairState[p] = {rsi:0,action:'HOLD',conf:0};
+      if (rM) pairState[p].rsi = parseFloat(rM[1]);
+      if (sigM) { pairState[p].action = sigM[1]; pairState[p].conf = parseInt(sigM[2]); }
+    }
+  });
+
+  return { summary, trades, pairState };
+}
+
+// ── Update UI ────────────────────────────────
+function updateUI(data, prefix, pairs) {
+  const s = data.summary;
+  const n = s.total.trades;
+  const net = s.total.net;
+  const exp = s.total.exp;
+  const fee = s.total.fee || Object.values(s.pairs).reduce((a,p)=>a+p.fee,0);
+  const pf  = s.total.pf;
+
+  // Hitung WR dari pairs
+  let totalWins = 0;
+  pairs.forEach(p => {
+    const ps = s.pairs[p] || {trades:0,wr:0};
+    totalWins += Math.round(ps.trades * ps.wr / 100);
+  });
+  const wr = n > 0 ? Math.round(totalWins/n*100) : 0;
+
+  // Total saldo
+  const saldo = pairs.reduce((a,p) => a + (s.pairs[p]?.saldo || CAPITAL/3), 0);
+
+  // Metrics
+  set(prefix+'-pnl', (net>=0?'+':'')+'$'+Math.abs(net).toFixed(3), net>=0?'green':'red');
+  set(prefix+'-wr', wr+'%', wr>=55?'green':wr>=40?'yellow':'red');
+  setText(prefix+'-trades', n+' trades');
+  set(prefix+'-exp', (exp>=0?'+':'')+'$'+Math.abs(exp).toFixed(4), exp>0?'green':exp<0?'red':'yellow');
+  set(prefix+'-pf', pf>0?pf.toFixed(2):'-', pf>1.5?'green':pf>1?'yellow':'red');
+  set(prefix+'-fee', '$'+fee.toFixed(3), 'red');
+  set(prefix+'-saldo', '$'+saldo.toFixed(2), saldo>=CAPITAL?'green':'red');
+  setText(prefix+'-tc', n);
+  setText('prog-'+prefix, n+'/100');
+
+  // Verdict
+  const vbox = document.getElementById('verd-'+prefix);
+  if (n < 10) { vbox.className='verdict wait'; vbox.textContent='Kumpulkan '+(100-n)+' trade lagi'; }
+  else if (n < 100) {
+    if (exp > 0) { vbox.className='verdict warn'; vbox.textContent=n+' trade | Exp '+( exp>=0?'+':'')+'$'+exp.toFixed(4)+' | Lanjut!'; }
+    else { vbox.className='verdict bad'; vbox.textContent='Exp negatif $'+exp.toFixed(4)+' — evaluasi strategi'; }
+  } else {
+    if (exp > 0 && pf > 1) { vbox.className='verdict good'; vbox.textContent='✓ VALID — Layak live!'; }
+    else { vbox.className='verdict bad'; vbox.textContent='✗ Expectancy negatif — perbaiki dulu'; }
+  }
+
+  // Per pair
+  const pairIds = {
+    BTCUSDT:'btc',ETHUSDT:'eth',BNBUSDT:'bnb',
+    SOLUSDT:'sol',XRPUSDT:'xrp',DOGEUSDT:'doge'
+  };
+  pairs.forEach(pair => {
+    const k = prefix+'-'+pairIds[pair];
+    const ps = s.pairs[pair] || {trades:0,wr:0,net:0};
+    setText(k+'-t', ps.trades+' trades');
+    set(k+'-wr', 'WR:'+ps.wr+'%', ps.wr>=55?'green':ps.wr>=40?'yellow':'red');
+    set(k+'-net', (ps.net>=0?'+':'')+'$'+ps.net.toFixed(3), ps.net>=0?'green':'red');
+  });
+
+  // Trades
+  const list = document.getElementById('trades-'+prefix);
+  if (!data.trades.length) {
+    list.innerHTML = '<div class="muted" style="font-size:10px;padding:4px">Belum ada trade...</div>';
+  } else {
+    list.innerHTML = data.trades.slice(0,12).map(t=>`
+      <div class="trade-row">
+        <span class="badge badge-${t.type.toLowerCase()}">${t.type}</span>
+        <span style="color:#888">${t.pair.replace('USDT','')}</span>
+        <span class="${t.pnl>=0?'green':'red'}">${t.pnl>=0?'+':''}$${t.pnl.toFixed(4)}</span>
+        <span class="red">-$${t.fee.toFixed(3)}</span>
+        <span class="muted">${t.time}</span>
+      </div>`).join('');
+  }
+
+  return { n, net, exp, pf };
+}
+
+function renderLog(lines, id) {
+  const box = document.getElementById(id);
+  box.innerHTML = '';
+  lines.slice(-40).forEach(line => {
+    const div = document.createElement('div');
+    div.className = 'log-line';
+    let cls = 'muted', icon = '';
+    if (line.includes('[SIM] BUY')){cls='log-buy';icon='▲ ';}
+    else if (line.includes('STOP-LOSS')){cls='log-sell';icon='✕ ';}
+    else if (line.includes('TAKE-PROFIT')){cls='log-tp';icon='✓ ';}
+    else if (line.includes('TOTAL')||line.includes('STATUS')){cls='log-sum';}
+    else if (line.includes('AI:HOLD')){cls='log-hold';}
+    else if (line.includes('AI:BUY')){cls='log-buy';}
+    const t = (line.match(/(\d{2}:\d{2}:\d{2})/)||['',''])[1];
+    const msg = line.replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d+ \[\w+\] /,'');
+    div.innerHTML = `<span class="log-time">${t}</span><span class="${cls}">${icon}${msg}</span>`;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── Fetch Functions ──────────────────────────
+let lastA = null, lastB = null;
+
+async function fetchA() {
+  const url = document.getElementById('url-a').value.trim();
+  try {
+    const resp = await fetch(url, {mode:'cors', cache:'no-store'});
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
+    const text = await resp.text();
+    const lines = text.split('\n').filter(l=>l.trim());
+    const data = parseLog(lines, 'a');
+    lastA = updateUI(data, 'a', ['BTCUSDT','ETHUSDT','BNBUSDT']);
+    renderLog(lines, 'log-a');
+    setText('a-lines', lines.length+' baris');
+    setText('upd-a', new Date().toLocaleTimeString('id-ID'));
+    document.getElementById('dot-a').className = 'dot live';
+    setText('st-a', 'Bot A ✓');
+    document.getElementById('st-a').className = 'green';
+    updateComparison();
+  } catch(e) {
+    document.getElementById('dot-a').className = 'dot off';
+    setText('st-a', 'A: '+e.message);
+    document.getElementById('st-a').className = 'red';
+  }
+}
+
+async function fetchB() {
+  const url = document.getElementById('url-b').value.trim();
+  try {
+    const resp = await fetch(url, {mode:'cors', cache:'no-store'});
+    if (!resp.ok) throw new Error('HTTP '+resp.status);
+    const text = await resp.text();
+    const lines = text.split('\n').filter(l=>l.trim());
+    const data = parseLog(lines, 'b');
+    lastB = updateUI(data, 'b', ['SOLUSDT','XRPUSDT','DOGEUSDT']);
+    renderLog(lines, 'log-b');
+    setText('b-lines', lines.length+' baris');
+    setText('upd-b', new Date().toLocaleTimeString('id-ID'));
+    document.getElementById('dot-b').className = 'dot live';
+    setText('st-b', 'Bot B ✓');
+    document.getElementById('st-b').className = 'blue';
+    updateComparison();
+  } catch(e) {
+    document.getElementById('dot-b').className = 'dot off';
+    setText('st-b', 'B: '+e.message);
+    document.getElementById('st-b').className = 'red';
+  }
+}
+
+function updateComparison() {
+  if (!lastA || !lastB) return;
+  const aNet = lastA.net, bNet = lastB.net;
+  setText('cmp-a-pnl', 'P&L: '+(aNet>=0?'+':'')+'$'+Math.abs(aNet).toFixed(3));
+  document.getElementById('cmp-a-pnl').className = 'winner-val '+(aNet>=0?'green':'red');
+  setText('cmp-b-pnl', 'P&L: '+(bNet>=0?'+':'')+'$'+Math.abs(bNet).toFixed(3));
+  document.getElementById('cmp-b-pnl').className = 'winner-val '+(bNet>=0?'blue':'red');
+
+  const winner = document.getElementById('cmp-winner');
+  if (aNet > bNet) { winner.textContent = '🔵 Bot A Unggul'; winner.style.color = '#00ff88'; }
+  else if (bNet > aNet) { winner.textContent = '🟢 Bot B Unggul'; winner.style.color = '#00aaff'; }
+  else { winner.textContent = 'Seri'; winner.style.color = '#555'; }
+}
+
+// ── Helpers ──────────────────────────────────
+function set(id, text, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  if (cls) el.className = 'metric-val '+cls;
+}
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+// ── Auto refresh ─────────────────────────────
+setInterval(() => {
+  countdown--;
+  setText('countdown', countdown+'s');
+  if (countdown <= 0) { countdown = 30; fetchA(); fetchB(); }
+}, 1000);
+
+fetchA(); fetchB();
+</script>
+</body>
+</html>
